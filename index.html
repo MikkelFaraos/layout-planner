@@ -1,0 +1,1030 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Store Layout Planner</title>
+<style>
+:root{--bg:#f3f4f6;--panel:#fff;--border:#e3e5ea;--text:#1d2330;--muted:#6b7280;--accent:#2563eb;--danger:#dc2626;--canvas:#e7e9ee}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;font:13px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--text);background:var(--bg)}
+.app{display:grid;grid-template-rows:auto 1fr;grid-template-columns:250px 1fr 290px;height:100vh;overflow:hidden}
+header{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 12px;background:var(--panel);border-bottom:1px solid var(--border)}
+header h1{font-size:15px;margin:0 10px 0 0;white-space:nowrap}
+.sep{width:1px;height:22px;background:var(--border);margin:0 4px}
+button,select,input,textarea{font:inherit;color:inherit}
+button{background:#fff;border:1px solid var(--border);border-radius:6px;padding:5px 9px;cursor:pointer;white-space:nowrap}
+button:hover{background:#f6f7f9;border-color:#cfd3da}
+button:disabled{opacity:.4;cursor:default}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.primary:hover{background:#1d4fd8}
+button.danger{color:var(--danger)}
+button.icon{padding:5px 8px;min-width:30px}
+input,select,textarea{border:1px solid var(--border);border-radius:6px;padding:5px 7px;background:#fff;width:100%}
+input:focus,select:focus,textarea:focus{outline:2px solid #bcd0ff;border-color:var(--accent)}
+input[type=color]{padding:0;width:28px;height:26px;border-radius:5px;cursor:pointer;flex:none}
+input[type=checkbox]{width:auto}
+textarea{resize:vertical}
+aside{background:var(--panel);overflow:auto;border-right:1px solid var(--border)}
+aside.right{border-right:0;border-left:1px solid var(--border)}
+.sec{padding:12px 14px;border-bottom:1px solid var(--border)}
+.sec h2{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 8px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:6px}
+.cat{font-size:11px;color:var(--muted);margin:10px 0 5px;font-weight:600}
+.lib{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.lib button{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 4px;font-size:12px;white-space:normal;text-align:center;line-height:1.15;cursor:grab}
+.lib svg{width:46px;height:28px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+label.f,div.f{display:block;font-size:11px;color:var(--muted);margin-bottom:8px}
+label.f>input,label.f>select,label.f>textarea{margin-top:3px}
+.inline{display:flex;gap:6px;margin-top:3px}
+.check{display:flex;gap:6px;align-items:center;margin:4px 0}
+.dept{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.dept .n{font-size:11px;color:var(--muted);min-width:18px;text-align:right}
+.dept button{padding:3px 7px}
+main{position:relative;background:var(--canvas);overflow:hidden;min-height:300px}
+#canvas{width:100%;height:100%;display:block;touch-action:none;user-select:none;-webkit-user-select:none}
+#canvas.panning{cursor:grabbing}
+.item{cursor:move}
+.item.locked{cursor:pointer}
+.item.selected .body{stroke:var(--accent);stroke-width:2.5px}
+.item.problem .body{stroke:var(--danger);stroke-width:2.5px;stroke-dasharray:6 3}
+.item.selected.problem .body{stroke:var(--accent)}
+.h-rot{cursor:grab}
+.h-res{cursor:nwse-resize}
+.status{position:absolute;left:10px;bottom:10px;background:rgba(255,255,255,.92);border:1px solid var(--border);border-radius:6px;padding:4px 9px;font-size:12px;color:var(--muted);pointer-events:none}
+.zoom{position:absolute;right:10px;bottom:10px;display:flex;gap:4px}
+.muted{color:var(--muted)}
+.stat{display:flex;justify-content:space-between;gap:8px;padding:3px 0}
+.stat b{font-weight:600}
+.sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px;border:1px solid rgba(0,0,0,.15)}
+.btns{display:flex;flex-wrap:wrap;gap:6px}
+.ok{color:#15803d}
+.warn{color:var(--danger)}
+kbd{font:11px ui-monospace,Consolas,monospace;background:#f3f4f6;border:1px solid var(--border);border-bottom-width:2px;border-radius:4px;padding:0 4px}
+.keys{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:12px;color:var(--muted)}
+@media (max-width:900px){
+  .app{grid-template-columns:1fr;grid-template-rows:auto 60vh auto auto;height:auto;overflow:visible}
+  main{grid-row:2}aside.left{grid-row:3}aside.right{grid-row:4}
+  aside{border:0;border-top:1px solid var(--border)}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>🏬 Store Layout Planner</h1>
+    <select id="layoutSel" title="Saved layouts" style="width:auto;max-width:200px"></select>
+    <input id="layoutName" style="width:180px" title="Layout name">
+    <button id="bNew" title="New blank layout">New</button>
+    <button id="bCopyLayout" title="Duplicate this layout">Duplicate</button>
+    <button id="bDelLayout" class="danger" title="Delete this layout">Delete</button>
+    <span class="sep"></span>
+    <button id="bUndo" class="icon" title="Undo (Ctrl+Z)">↶</button>
+    <button id="bRedo" class="icon" title="Redo (Ctrl+Y)">↷</button>
+    <span class="sep"></span>
+    <button id="bImport">Import</button>
+    <button id="bJSON">Export JSON</button>
+    <button id="bPNG" class="primary">Export image</button>
+    <input type="file" id="fileIn" accept=".json,application/json" hidden>
+    <span id="saveState" class="muted" style="margin-left:auto"></span>
+  </header>
+
+  <aside class="left">
+    <div class="sec">
+      <h2>Fixtures</h2>
+      <div class="muted" style="font-size:12px">Click to add, or drag onto the floor.</div>
+      <div id="library"></div>
+    </div>
+    <div class="sec">
+      <h2>Store</h2>
+      <div class="row">
+        <label class="f">Width (m)<input id="sW" type="number" min="1" step="0.5"></label>
+        <label class="f">Depth (m)<input id="sH" type="number" min="1" step="0.5"></label>
+      </div>
+      <div class="row">
+        <label class="f">Grid
+          <select id="sGrid"><option value="25">25 cm</option><option value="50">50 cm</option><option value="100">1 m</option><option value="200">2 m</option></select>
+        </label>
+        <label class="f">Snap to
+          <select id="sSnap"><option value="0">Off</option><option value="5">5 cm</option><option value="10">10 cm</option><option value="25">25 cm</option><option value="50">50 cm</option><option value="100">1 m</option></select>
+        </label>
+      </div>
+      <label class="check"><input type="checkbox" id="sLabels"> Show labels</label>
+      <label class="check" title="Turn off when the store's shape is drawn with Wall pieces"><input type="checkbox" id="sOutline"> Rectangular outer wall</label>
+    </div>
+    <div class="sec">
+      <h2>Departments <button id="bAddDept" style="padding:2px 8px">+ Add</button></h2>
+      <div id="depts"></div>
+    </div>
+  </aside>
+
+  <main>
+    <svg id="canvas" xmlns="http://www.w3.org/2000/svg"><g id="floor"></g><g id="items"></g><g id="overlay"></g></svg>
+    <div class="status" id="status">Drag empty space to pan · scroll to zoom</div>
+    <div class="zoom">
+      <button class="icon" id="zOut" title="Zoom out (-)">−</button>
+      <button id="zFit" title="Fit store (F)">Fit</button>
+      <button class="icon" id="zIn" title="Zoom in (+)">+</button>
+    </div>
+  </main>
+
+  <aside class="right" id="props"></aside>
+</div>
+
+<script>
+const NS = 'http://www.w3.org/2000/svg';
+const FONT = 'system-ui, Segoe UI, Roboto, sans-serif';
+const KEY = 'store-layout-planner.v2';
+const $ = s => document.querySelector(s);
+const svg = $('#canvas');
+const uid = () => Math.random().toString(36).slice(2, 10);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtM = cm => +(cm / 100).toFixed(2) + ' m';
+const m2 = cm2 => (cm2 / 10000).toFixed(1) + ' m²';
+
+function el(tag, attrs = {}, text) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) if (attrs[k] != null) e.setAttribute(k, attrs[k]);
+  if (text != null) e.textContent = text;
+  return e;
+}
+function mk(tag, attrs = {}, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if (k === 'class') e.className = v;
+    else e.setAttribute(k, v);
+  }
+  for (const c of kids.flat()) if (c != null && c !== false) e.append(c);
+  return e;
+}
+
+// ---------- Fixture catalogue (sizes in cm) ----------
+const TYPES = {
+  gondola:   {name:'Gondola shelf',   w:300, h:90,  shape:'shelf',    cat:'Shelving',      color:'#cbd5e1'},
+  endcap:    {name:'End cap',         w:90,  h:60,  shape:'rect',     cat:'Shelving',      color:'#cbd5e1'},
+  wallshelf: {name:'Wall shelf',      w:300, h:50,  shape:'rect',     cat:'Shelving',      color:'#cbd5e1'},
+  fridge:    {name:'Fridge',          w:250, h:90,  shape:'fridge',   cat:'Refrigeration', color:'#bfdbfe'},
+  freezer:   {name:'Chest freezer',   w:200, h:90,  shape:'freezer',  cat:'Refrigeration', color:'#bae6fd'},
+  table:     {name:'Display table',   w:150, h:100, shape:'rect',     cat:'Display',       color:'#e9d5ff'},
+  promo:     {name:'Promo stand',     w:80,  h:80,  shape:'rect',     cat:'Display',       color:'#fbcfe8'},
+  rack:      {name:'Clothing rack',   w:150, h:60,  shape:'rack',     cat:'Display',       color:'#e5e7eb'},
+  roundrack: {name:'Round rack',      w:100, h:100, shape:'circle',   cat:'Display',       color:'#e5e7eb'},
+  checkout:  {name:'Checkout',        w:180, h:80,  shape:'checkout', cat:'Service',       color:'#fecaca'},
+  counter:   {name:'Service counter', w:250, h:70,  shape:'rect',     cat:'Service',       color:'#fed7aa'},
+  fitting:   {name:'Fitting room',    w:150, h:150, shape:'room',     cat:'Service',       color:'#f5f5f4'},
+  entrance:  {name:'Entrance',        w:250, h:30,  shape:'door',     cat:'Structure',     color:'#bbf7d0', free:true},
+  wall:      {name:'Wall',            w:300, h:15,  shape:'wall',     cat:'Structure',     color:'#475569', free:true, nolabel:true},
+  pillar:    {name:'Pillar',          w:50,  h:50,  shape:'pillar',   cat:'Structure',     color:'#64748b', nolabel:true},
+  zone:      {name:'Zone / room',     w:400, h:300, shape:'zone',     cat:'Structure',     color:'#94a3b8', free:true, under:true},
+  plant:     {name:'Plant / decor',   w:60,  h:60,  shape:'circle',   cat:'Structure',     color:'#86efac', nolabel:true},
+};
+
+const DEFAULT_DEPTS = [
+  {id:'kostume',  name:'Kostume afdeling',   color:'#70ad47'},
+  {id:'begynder', name:'Begynder udstyr',    color:'#bf9000'},
+  {id:'kaste',    name:'Kastevåben',         color:'#c55a11'},
+  {id:'potion',   name:'Potion bottles',     color:'#b4c7e7'},
+  {id:'store',    name:'Store våben',        color:'#c00000'},
+  {id:'replika',  name:'Replika våben',      color:'#4a5a73'},
+  {id:'kro',      name:'Kro/mjød/DIY',       color:'#ffc000'},
+  {id:'tilbehor', name:'Tilbehør',           color:'#2e75b6'},
+  {id:'laeder',   name:'Læder Tilbehør',     color:'#00b050'},
+  {id:'metal',    name:'Metal rustning',     color:'#a6a6a6'},
+  {id:'toj',      name:'Tøj',                color:'#7030a0'},
+  {id:'sminke',   name:'Sminke og proteser', color:'#c33ee8'},
+];
+const EXTRA_COLORS = ['#7dd3c0','#f59e7b','#a3b8f5','#d4e17a','#e8a0e0','#9fd3e8','#f7c58a'];
+
+function newItem(type, x, y, o = {}) {
+  const t = TYPES[type];
+  return {id:uid(), type, x, y, w:t.w, h:t.h, r:0, label:'', dept:'', notes:'', locked:false, ...o};
+}
+
+// The store as drawn in the owner's sketch. Coordinates are sketch pixels,
+// scaled at SK cm per pixel (an estimate — resize the store if it's off).
+const SK = 4, OX = 115, OY = 55;
+function skSeg(type, x1, y1, x2, y2, thick, o = {}) {
+  [x1, y1, x2, y2] = [(x1 - OX) * SK, (y1 - OY) * SK, (x2 - OX) * SK, (y2 - OY) * SK];
+  const len = Math.hypot(x2 - x1, y2 - y1) + (type === 'wall' ? thick : 0);   // walls overlap at corners
+  const r = ((Math.round(Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI) % 180) + 180) % 180;
+  return newItem(type, Math.round((x1 + x2) / 2), Math.round((y1 + y2) / 2), {w:Math.round(len), h:thick, r, ...o});
+}
+function skBox(type, dept, x1, y1, x2, y2, o = {}) {
+  let w = (x2 - x1) * SK, h = (y2 - y1) * SK, r = 0;
+  if (h > w * 1.5) { [w, h] = [h, w]; r = 90; }
+  return newItem(type, ((x1 + x2) / 2 - OX) * SK, ((y1 + y2) / 2 - OY) * SK, {w, h, r, dept, ...o});
+}
+function sampleDoc() {
+  const items = [];
+  const wallPath = [[235,58],[510,58]], wallPath2 = [[550,58],[632,58],[632,755],[408,755],[408,728],[290,728],[290,865],[117,865],
+    [117,620],[345,620],[345,643],[395,643],[395,573],[478,573],[478,512],[455,482],[478,455],[478,360],[455,325],[278,325],
+    [278,133],[235,133],[235,58]];
+  for (const path of [wallPath, wallPath2, [[573,215],[573,272],[632,272]]])
+    for (let k = 1; k < path.length; k++) items.push(skSeg('wall', ...path[k - 1], ...path[k], 20));
+  items.push(skSeg('wall', 577, 705, 577, 752, 30));
+  items.push(skSeg('entrance', 512, 58, 548, 58, 30, {label:'Ind/ud'}));
+
+  const B = (...a) => items.push(skBox(...a));
+  // Kostume afdeling
+  B('wallshelf', 'kostume', 250, 63, 355, 72); B('promo', 'kostume', 427, 63, 439, 70); B('promo', 'kostume', 481, 63, 493, 70);
+  B('wallshelf', 'kostume', 238, 62, 246, 120); B('wallshelf', 'kostume', 238, 121, 293, 129); B('wallshelf', 'kostume', 285, 131, 293, 253);
+  B('rack', 'kostume', 265, 91, 286, 98); B('rack', 'kostume', 290, 91, 311, 98); B('rack', 'kostume', 315, 91, 347, 98);
+  for (const x of [374, 399, 421, 444]) B('rack', 'kostume', x, 94, x + 8, 132);
+  B('promo', 'kostume', 458, 315, 481, 327); B('wallshelf', 'kostume', 483, 365, 491, 448);
+  items.push(skSeg('wallshelf', 468, 477, 487, 458, 32, {dept:'kostume'}));
+  items.push(skSeg('wallshelf', 462, 481, 487, 507, 32, {dept:'kostume'}));
+  B('wallshelf', 'kostume', 483, 514, 491, 606); B('wallshelf', 'kostume', 399, 610, 407, 642);
+  B('promo', 'kostume', 559, 160, 567, 170); B('wallshelf', 'kostume', 122, 636, 130, 697);
+  B('gondola', 'kostume', 545, 330, 556, 450); B('gondola', 'kostume', 545, 450, 556, 570);
+  // Tilbehør
+  B('gondola', 'tilbehor', 557, 330, 568, 450); B('gondola', 'tilbehor', 557, 450, 568, 570);
+  B('table', 'tilbehor', 345, 160, 457, 271, {label:'Midterdisplay'});
+  // Begynder udstyr, kastevåben, potions
+  B('wallshelf', 'begynder', 552, 63, 630, 72); B('wallshelf', 'begynder', 550, 75, 558, 120); B('wallshelf', 'begynder', 621, 74, 630, 158);
+  B('wallshelf', 'kaste', 574, 162, 628, 170); B('promo', 'kaste', 290, 716, 330, 724);
+  B('wallshelf', 'potion', 620, 282, 630, 306);
+  B('zone', '', 558, 178, 630, 197, {label:'→'}); B('zone', '', 612, 198, 630, 248, {label:'↑'});
+  // Store våben, kro, replika
+  B('wallshelf', 'store', 620, 310, 630, 493); B('wallshelf', 'store', 620, 500, 630, 671);
+  B('wallshelf', 'kro', 575, 677, 630, 686); B('wallshelf', 'kro', 622, 687, 630, 750);
+  B('wallshelf', 'replika', 408, 702, 462, 711); B('wallshelf', 'replika', 463, 702, 473, 750); B('wallshelf', 'replika', 483, 743, 568, 750);
+  B('counter', '', 498, 690, 550, 717, {label:'Disk'});
+  // Læder, metal, tøj, sminke
+  B('wallshelf', 'laeder', 122, 625, 272, 634); B('wallshelf', 'laeder', 298, 624, 323, 632); B('wallshelf', 'laeder', 343, 649, 395, 657);
+  B('table', 'metal', 398, 575, 481, 607); B('table', 'metal', 178, 663, 230, 689); B('wallshelf', 'metal', 122, 853, 162, 861);
+  B('rack', 'toj', 122, 701, 130, 849); B('rack', 'toj', 166, 853, 276, 861); B('rack', 'toj', 278, 732, 286, 858);
+  B('rack', 'toj', 176, 739, 233, 747); B('rack', 'toj', 233, 750, 241, 807); B('rack', 'toj', 173, 808, 230, 816);
+  B('wallshelf', 'sminke', 285, 257, 293, 322); B('wallshelf', 'sminke', 298, 315, 447, 322);
+
+  items.forEach(i => { i.x = Math.round(i.x); i.y = Math.round(i.y); i.w = Math.round(i.w); i.h = Math.round(i.h); });
+  return {name:'Butikken (fra skitse)', store:{w:2080, h:3260, grid:100, snap:10, labels:true, outline:false},
+          departments:DEFAULT_DEPTS.map(d => ({...d})), items};
+}
+function blankDoc(name = 'New layout') {
+  return {name, store:{w:2000, h:1200, grid:100, snap:10, labels:true, outline:true},
+          departments:DEFAULT_DEPTS.map(d => ({...d})), items:[]};
+}
+function normalize(d) {
+  d.name = d.name || 'Untitled layout';
+  d.store = {w:2000, h:1200, grid:100, snap:10, labels:true, outline:true, ...(d.store || {})};
+  d.departments = Array.isArray(d.departments) ? d.departments : [];
+  d.items = (Array.isArray(d.items) ? d.items : []).filter(i => i && TYPES[i.type]).map(i => ({
+    label:'', dept:'', notes:'', r:0, locked:false, ...i, id:i.id || uid(),
+    w:+i.w || TYPES[i.type].w, h:+i.h || TYPES[i.type].h, x:+i.x || 0, y:+i.y || 0}));
+  return d;
+}
+
+// ---------- State & persistence ----------
+let lib, doc, sel = new Set(), problems = new Set(), clipboard = null;
+let undoStack = [], redoStack = [], lastSnap = '';
+let view = {x:0, y:0, z:.4};   // z = screen px per cm
+let drag = null, spaceDown = false;
+
+function loadLib() {
+  try {
+    const j = JSON.parse(localStorage.getItem(KEY));
+    if (j && j.layouts && j.layouts[j.current]) {
+      for (const id in j.layouts) normalize(j.layouts[id]);
+      return j;
+    }
+  } catch {}
+  const id = uid();
+  return {current:id, layouts:{[id]:sampleDoc()}};
+}
+function persist() {
+  lib.layouts[lib.current] = doc;
+  try {
+    localStorage.setItem(KEY, JSON.stringify(lib));
+    $('#saveState').textContent = 'Saved ' + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  } catch {
+    $('#saveState').textContent = 'Not saved — browser storage unavailable (use Export JSON)';
+  }
+}
+function commit() {
+  const snap = JSON.stringify(doc);
+  if (snap === lastSnap) return;
+  undoStack.push(lastSnap);
+  if (undoStack.length > 200) undoStack.shift();
+  redoStack = [];
+  lastSnap = snap;
+  persist();
+  updateUndo();
+}
+function restore(snap) {
+  lastSnap = snap;
+  doc = JSON.parse(snap);
+  for (const id of [...sel]) if (!byId(id)) sel.delete(id);
+  persist();
+  refreshAll();
+}
+function undo() { if (undoStack.length) { redoStack.push(lastSnap); restore(undoStack.pop()); } }
+function redo() { if (redoStack.length) { undoStack.push(lastSnap); restore(redoStack.pop()); } }
+function updateUndo() { $('#bUndo').disabled = !undoStack.length; $('#bRedo').disabled = !redoStack.length; }
+
+function openLayout(id) {
+  lib.current = id;
+  doc = lib.layouts[id];
+  sel.clear(); undoStack = []; redoStack = [];
+  lastSnap = JSON.stringify(doc);
+  persist();
+  refreshAll();
+  fit();
+}
+
+// ---------- Geometry ----------
+const byId = id => doc.items.find(i => i.id === id);
+const selItems = () => [...sel].map(byId).filter(Boolean);
+const snapStep = () => +doc.store.snap || 0;
+function ext(it) {
+  const a = (it.r || 0) * Math.PI / 180, c = Math.abs(Math.cos(a)), s = Math.abs(Math.sin(a));
+  return {hw:(it.w * c + it.h * s) / 2, hh:(it.w * s + it.h * c) / 2};
+}
+function box(it) { const e = ext(it); return {l:it.x - e.hw, t:it.y - e.hh, r:it.x + e.hw, b:it.y + e.hh}; }
+function snapItem(it) {
+  const s = snapStep(); if (!s) return;
+  const e = ext(it);
+  it.x = Math.round((it.x - e.hw) / s) * s + e.hw;
+  it.y = Math.round((it.y - e.hh) / s) * s + e.hh;
+}
+function findProblems() {
+  const P = new Set(), W = doc.store.w, H = doc.store.h, eps = .5;
+  const L = doc.items.filter(i => !TYPES[i.type].free).map(i => ({i, b:box(i)}));
+  for (const {i, b} of L) if (b.l < -eps || b.t < -eps || b.r > W + eps || b.b > H + eps) P.add(i.id);
+  for (let a = 0; a < L.length; a++) for (let c = a + 1; c < L.length; c++) {
+    const A = L[a].b, B = L[c].b;
+    if (A.l < B.r - eps && B.l < A.r - eps && A.t < B.b - eps && B.t < A.b - eps && overlaps(L[a].i, L[c].i)) { P.add(L[a].i.id); P.add(L[c].i.id); }
+  }
+  return P;
+}
+function corners(it) {
+  const a = (it.r || 0) * Math.PI / 180, c = Math.cos(a), s = Math.sin(a), w = it.w / 2, h = it.h / 2;
+  return [[-w, -h], [w, -h], [w, h], [-w, h]].map(([x, y]) => [it.x + x * c - y * s, it.y + x * s + y * c]);
+}
+function overlaps(A, B) {   // separating-axis test for two rotated rectangles
+  const ca = corners(A), cb = corners(B);
+  for (const r of [A.r || 0, (A.r || 0) + 90, B.r || 0, (B.r || 0) + 90]) {
+    const t = r * Math.PI / 180, ax = Math.cos(t), ay = Math.sin(t);
+    const pa = ca.map(([x, y]) => x * ax + y * ay), pb = cb.map(([x, y]) => x * ax + y * ay);
+    if (Math.max(...pa) <= Math.min(...pb) + .5 || Math.max(...pb) <= Math.min(...pa) + .5) return false;
+  }
+  return true;
+}
+const colorOf = it => (doc.departments.find(d => d.id === it.dept) || {}).color || TYPES[it.type].color;
+
+// ---------- Drawing ----------
+function drawShape(g, it, col) {
+  const t = TYPES[it.type], w = it.w, h = it.h, x = -w / 2, y = -h / 2;
+  const base = {class:'body', stroke:'rgba(0,0,0,.45)', 'stroke-width':1, 'vector-effect':'non-scaling-stroke'};
+  const line = (x1, y1, x2, y2, extra = {}) => g.append(el('line', {x1, y1, x2, y2, stroke:'rgba(0,0,0,.35)', 'stroke-width':1, 'vector-effect':'non-scaling-stroke', ...extra}));
+  switch (t.shape) {
+    case 'circle': g.append(el('ellipse', {...base, rx:w / 2, ry:h / 2, fill:col})); break;
+    case 'zone': g.append(el('rect', {...base, x, y, width:w, height:h, fill:col, 'fill-opacity':.22, stroke:col, 'stroke-width':2, 'stroke-dasharray':'8 5'})); break;
+    case 'wall': g.append(el('rect', {...base, x, y, width:w, height:h, fill:'#475569'})); break;
+    case 'pillar':
+      g.append(el('rect', {...base, x, y, width:w, height:h, fill:'#64748b'}));
+      line(x, y, -x, -y, {stroke:'rgba(255,255,255,.5)'}); line(-x, y, x, -y, {stroke:'rgba(255,255,255,.5)'});
+      break;
+    case 'door':
+      g.append(el('rect', {...base, x, y, width:w, height:h, fill:col, stroke:'#16a34a'}));
+      line(0, y, 0, -y, {stroke:'#16a34a'});
+      break;
+    default: g.append(el('rect', {...base, x, y, width:w, height:h, rx:Math.min(4, w / 8, h / 8), fill:col}));
+  }
+  if (t.shape === 'shelf') line(x + 6, 0, -x - 6, 0);
+  if (t.shape === 'rack') line(x + 8, 0, -x - 8, 0, {'stroke-width':2.5, stroke:'rgba(0,0,0,.45)'});
+  if (t.shape === 'fridge') { const fy = h / 2 - Math.min(20, h * .25); line(x + 4, fy, -x - 4, fy, {stroke:'rgba(30,64,175,.6)', 'stroke-width':2}); }
+  if (t.shape === 'freezer') g.append(el('rect', {x:x + 8, y:y + 8, width:Math.max(0, w - 16), height:Math.max(0, h - 16), fill:'none', stroke:'rgba(30,64,175,.45)', 'vector-effect':'non-scaling-stroke'}));
+  if (t.shape === 'checkout') { const cw = Math.min(40, w * .25); g.append(el('rect', {x:w / 2 - cw - 8, y:y + 8, width:cw, height:Math.max(0, h - 16), rx:3, fill:'rgba(0,0,0,.2)'})); }
+  if (t.shape === 'room') line(x + 6, h / 2 - 15, -x - 6, h / 2 - 15, {'stroke-dasharray':'6 4'});
+}
+
+function drawLabel(g, it) {
+  if (!doc.store.labels) return;
+  const t = TYPES[it.type];
+  let txt = it.label || (t.nolabel ? '' : t.name);
+  if (!txt) return;
+  const attrs = {fill:'#1f2937', 'pointer-events':'none', 'font-family':FONT, 'font-weight':500};
+  if (t.under) {   // zones: label in the top-left corner so fixtures inside stay readable
+    g.append(el('text', {...attrs, x:-it.w / 2 + 10, y:-it.h / 2 + 10, 'font-size':clamp(it.h * .08, 12, 30), 'dominant-baseline':'hanging', fill:'#334155'}, txt));
+    return;
+  }
+  let long = it.w, short = it.h, rot = 0;
+  if (it.h > it.w * 1.25) { long = it.h; short = it.w; rot = 90; }
+  const fs = clamp(short * .32, 9, 28);
+  const maxChars = Math.floor((long - 8) / (fs * .58));
+  if (maxChars < 2) return;
+  if (txt.length > maxChars) txt = txt.slice(0, maxChars - 1) + '…';
+  const total = (((it.r || 0) + rot) % 360 + 360) % 360;
+  if (total > 90 && total <= 270) rot += 180;   // keep text upright
+  g.append(el('text', {...attrs, x:0, y:0, 'font-size':fs, 'text-anchor':'middle', 'dominant-baseline':'central', transform:`rotate(${rot})`}, txt));
+}
+
+function renderFloor() {
+  const {w:W, h:H, grid} = doc.store, z = view.z, f = $('#floor');
+  f.replaceChildren();
+  const defs = el('defs');
+  const G = grid * 5;
+  const pm = el('pattern', {id:'gMinor', width:grid, height:grid, patternUnits:'userSpaceOnUse'});
+  pm.append(el('path', {d:`M ${grid} 0 L 0 0 0 ${grid}`, fill:'none', stroke:'#e3e3dc', 'stroke-width':1 / z}));
+  const pM = el('pattern', {id:'gMajor', width:G, height:G, patternUnits:'userSpaceOnUse'});
+  pM.append(el('path', {d:`M ${G} 0 L 0 0 0 ${G}`, fill:'none', stroke:'#cbcbc2', 'stroke-width':1.2 / z}));
+  defs.append(pm, pM);
+  f.append(defs);
+  f.append(el('rect', {x:0, y:0, width:W, height:H, fill:'#fcfcfa'}));
+  if (grid * z >= 5) f.append(el('rect', {x:0, y:0, width:W, height:H, fill:'url(#gMinor)'}));
+  f.append(el('rect', {x:0, y:0, width:W, height:H, fill:'url(#gMajor)'}));
+  f.append(el('rect', {x:0, y:0, width:W, height:H, fill:'none', stroke:doc.store.outline ? '#334155' : '#cbd5e1', 'stroke-width':(doc.store.outline ? 3 : 1) / z}));
+  const step = [50, 100, 200, 500, 1000, 2000, 5000].find(s => s * z >= 48) || 10000;
+  const txt = {'font-size':11 / z, fill:'#64748b', 'font-family':FONT};
+  for (let x = 0; x <= W + .1; x += step) {
+    f.append(el('line', {x1:x, y1:-6 / z, x2:x, y2:0, stroke:'#64748b', 'stroke-width':1 / z}));
+    f.append(el('text', {...txt, x, y:-9 / z, 'text-anchor':'middle'}, fmtM(x)));
+  }
+  for (let y = step; y <= H + .1; y += step) {
+    f.append(el('line', {x1:-6 / z, y1:y, x2:0, y2:y, stroke:'#64748b', 'stroke-width':1 / z}));
+    f.append(el('text', {...txt, x:-9 / z, y, 'text-anchor':'end', 'dominant-baseline':'central'}, fmtM(y)));
+  }
+}
+
+function renderOverlay() {
+  const O = $('#overlay'), z = view.z;
+  O.replaceChildren();
+  if (sel.size !== 1) return;
+  const it = selItems()[0]; if (!it) return;
+  const b = box(it);
+  O.append(el('text', {x:it.x, y:b.b + 16 / z, 'font-size':11 / z, 'text-anchor':'middle', fill:'#2563eb', 'font-family':FONT, 'font-weight':600,
+    stroke:'#fff', 'stroke-width':3 / z, 'paint-order':'stroke', 'pointer-events':'none'},
+    `${Math.round(it.w)} × ${Math.round(it.h)} cm${it.locked ? ' · locked' : ''}`));
+  if (it.locked) return;
+  const g = el('g', {transform:`translate(${it.x} ${it.y}) rotate(${it.r || 0})`});
+  const hs = 10 / z, ry = -it.h / 2 - 24 / z;
+  g.append(el('line', {x1:0, y1:-it.h / 2, x2:0, y2:ry, stroke:'#2563eb', 'stroke-width':1.5 / z}));
+  g.append(el('circle', {cx:0, cy:ry, r:6 / z, fill:'#fff', stroke:'#2563eb', 'stroke-width':1.5 / z, 'data-handle':'rotate', class:'h-rot'}));
+  g.append(el('rect', {x:it.w / 2 - hs / 2, y:it.h / 2 - hs / 2, width:hs, height:hs, fill:'#fff', stroke:'#2563eb', 'stroke-width':1.5 / z, 'data-handle':'resize', class:'h-res'}));
+  O.append(g);
+}
+
+function render() {
+  problems = findProblems();
+  renderFloor();
+  const L = $('#items');
+  L.replaceChildren();
+  const under = i => TYPES[i.type].under ? 0 : 1;
+  for (const it of [...doc.items].sort((a, b) => under(a) - under(b))) {
+    const cls = 'item' + (sel.has(it.id) ? ' selected' : '') + (problems.has(it.id) ? ' problem' : '') + (it.locked ? ' locked' : '');
+    const g = el('g', {'data-id':it.id, class:cls, transform:`translate(${it.x} ${it.y}) rotate(${it.r || 0})`});
+    drawShape(g, it, colorOf(it));
+    drawLabel(g, it);
+    if (it.notes) g.append(el('title', {}, (it.label || TYPES[it.type].name) + '\n' + it.notes));
+    L.append(g);
+  }
+  renderOverlay();
+}
+
+// ---------- View ----------
+function applyView() {
+  const w = svg.clientWidth || 1, h = svg.clientHeight || 1;
+  svg.setAttribute('viewBox', `${view.x} ${view.y} ${w / view.z} ${h / view.z}`);
+}
+function fit() {
+  const w = svg.clientWidth || 800, h = svg.clientHeight || 600, W = doc.store.w, H = doc.store.h;
+  view.z = Math.min((w - 90) / W, (h - 90) / H);
+  view.x = W / 2 - w / 2 / view.z;
+  view.y = H / 2 - h / 2 / view.z;
+  applyView(); render();
+}
+function zoomAt(f, cx, cy) {
+  const r = svg.getBoundingClientRect();
+  if (cx == null) { cx = r.width / 2; cy = r.height / 2; }
+  const wx = view.x + cx / view.z, wy = view.y + cy / view.z;
+  view.z = clamp(view.z * f, .03, 8);
+  view.x = wx - cx / view.z; view.y = wy - cy / view.z;
+  applyView(); render();
+}
+function pt(e) {
+  const r = svg.getBoundingClientRect();
+  return {x:view.x + (e.clientX - r.left) / view.z, y:view.y + (e.clientY - r.top) / view.z};
+}
+function viewCenter() {
+  const r = svg.getBoundingClientRect();
+  return {x:view.x + r.width / 2 / view.z, y:view.y + r.height / 2 / view.z};
+}
+
+// ---------- Actions ----------
+function addItem(type, at) {
+  const p = at || viewCenter();
+  const it = newItem(type, p.x, p.y);
+  snapItem(it);
+  doc.items.push(it);
+  sel = new Set([it.id]);
+  render(); renderProps(); renderDepts();
+  commit();
+}
+function deleteSel() {
+  if (!sel.size) return;
+  doc.items = doc.items.filter(i => !sel.has(i.id));
+  sel.clear();
+  refresh(); commit();
+}
+function cloneItems(items, dx, dy) {
+  const copies = items.map(i => ({...JSON.parse(JSON.stringify(i)), id:uid(), x:i.x + dx, y:i.y + dy, locked:false}));
+  doc.items.push(...copies);
+  sel = new Set(copies.map(c => c.id));
+  refresh(); commit();
+}
+function duplicate() { const its = selItems(); if (its.length) cloneItems(its, snapStep() * 3 || 30, snapStep() * 3 || 30); }
+function copySel() { const its = selItems(); if (its.length) clipboard = JSON.parse(JSON.stringify(its)); }
+function paste() {
+  if (!clipboard) return;
+  const c = viewCenter(), bx = clipboard.reduce((s, i) => s + i.x, 0) / clipboard.length, by = clipboard.reduce((s, i) => s + i.y, 0) / clipboard.length;
+  let dx = c.x - bx, dy = c.y - by;
+  const s = snapStep(); if (s) { dx = Math.round(dx / s) * s; dy = Math.round(dy / s) * s; }
+  cloneItems(clipboard, dx, dy);
+}
+function rotateSel(d) {
+  const its = selItems().filter(i => !i.locked); if (!its.length) return;
+  its.forEach(i => { i.r = (((i.r || 0) + d) % 360 + 360) % 360; });
+  render(); fillProps(); commit();
+}
+function nudge(dx, dy) {
+  const its = selItems().filter(i => !i.locked); if (!its.length) return;
+  its.forEach(i => { i.x += dx; i.y += dy; });
+  render(); fillProps(); commit();
+}
+function reorder(front) {
+  const its = selItems(); if (!its.length) return;
+  doc.items = doc.items.filter(i => !sel.has(i.id));
+  front ? doc.items.push(...its) : doc.items.unshift(...its);
+  render(); commit();
+}
+function align(mode) {
+  const its = selItems().filter(i => !i.locked); if (its.length < 2) return;
+  const bs = its.map(box);
+  const L = Math.min(...bs.map(b => b.l)), R = Math.max(...bs.map(b => b.r));
+  const T = Math.min(...bs.map(b => b.t)), B = Math.max(...bs.map(b => b.b));
+  for (const it of its) {
+    const e = ext(it);
+    if (mode === 'l') it.x = L + e.hw;
+    if (mode === 'c') it.x = (L + R) / 2;
+    if (mode === 'r') it.x = R - e.hw;
+    if (mode === 't') it.y = T + e.hh;
+    if (mode === 'm') it.y = (T + B) / 2;
+    if (mode === 'b') it.y = B - e.hh;
+  }
+  render(); commit();
+}
+function distribute(axis) {
+  const its = selItems().filter(i => !i.locked); if (its.length < 3) return;
+  const k = axis === 'x' ? ['x', 'hw'] : ['y', 'hh'];
+  its.sort((a, b) => a[k[0]] - b[k[0]]);
+  const ex = its.map(ext);
+  const start = its[0][k[0]] - ex[0][k[1]];
+  const end = its.at(-1)[k[0]] + ex.at(-1)[k[1]];
+  const sizes = ex.reduce((s, e) => s + 2 * e[k[1]], 0);
+  const gap = (end - start - sizes) / (its.length - 1);
+  let pos = start;
+  its.forEach((it, n) => { it[k[0]] = pos + ex[n][k[1]]; pos += 2 * ex[n][k[1]] + gap; });
+  render(); commit();
+}
+
+// ---------- Pointer interaction ----------
+svg.addEventListener('pointerdown', e => {
+  if (e.button === 1 || (e.button === 0 && spaceDown)) {
+    e.preventDefault();
+    drag = {type:'pan', c0:{x:e.clientX, y:e.clientY}, v0:{...view}, moved:true};
+    svg.classList.add('panning'); svg.setPointerCapture(e.pointerId); return;
+  }
+  if (e.button !== 0) return;
+  const p = pt(e);
+  const handle = e.target.closest('[data-handle]');
+  if (handle) {
+    const it = selItems()[0];
+    drag = {type:handle.dataset.handle, it, start:{...it}, moved:false};
+    svg.setPointerCapture(e.pointerId); return;
+  }
+  const g = e.target.closest('[data-id]');
+  if (g) {
+    const id = g.dataset.id;
+    if (e.shiftKey || e.ctrlKey || e.metaKey) {
+      sel.has(id) ? sel.delete(id) : sel.add(id);
+      render(); renderProps();
+      if (!sel.has(id)) return;
+    } else if (!sel.has(id)) {
+      sel = new Set([id]); render(); renderProps();
+    }
+    const starts = selItems().filter(i => !i.locked).map(i => ({it:i, x:i.x, y:i.y}));
+    drag = {type:'move', p0:p, primary:byId(id), starts, moved:false};
+  } else {
+    drag = {type:'pan', c0:{x:e.clientX, y:e.clientY}, v0:{...view}, moved:false};
+  }
+  svg.setPointerCapture(e.pointerId);
+});
+
+svg.addEventListener('pointermove', e => {
+  const p = pt(e);
+  $('#status').textContent = `x ${fmtM(Math.round(p.x))} · y ${fmtM(Math.round(p.y))}` + (sel.size > 1 ? ` · ${sel.size} selected` : '');
+  if (!drag) return;
+  if (drag.type === 'pan') {
+    const dx = e.clientX - drag.c0.x, dy = e.clientY - drag.c0.y;
+    if (!drag.moved && Math.hypot(dx, dy) < 4) return;
+    if (!drag.moved) { drag.moved = true; svg.classList.add('panning'); }
+    view.x = drag.v0.x - dx / view.z; view.y = drag.v0.y - dy / view.z;
+    applyView(); return;
+  }
+  if (drag.type === 'move') {
+    let dx = p.x - drag.p0.x, dy = p.y - drag.p0.y;
+    if (!drag.moved && Math.hypot(dx, dy) * view.z < 3) return;
+    drag.moved = true;
+    const s = snapStep();
+    const ps = drag.starts.find(o => o.it === drag.primary) || drag.starts[0];
+    if (s && ps) {   // snap the grabbed fixture's edge; others move by the same offset
+      const e2 = ext(ps.it), left = ps.x + dx - e2.hw, top = ps.y + dy - e2.hh;
+      dx += Math.round(left / s) * s - left; dy += Math.round(top / s) * s - top;
+    }
+    for (const o of drag.starts) { o.it.x = o.x + dx; o.it.y = o.y + dy; }
+  } else if (drag.type === 'resize') {
+    const it = drag.it, s0 = drag.start, a = (s0.r || 0) * Math.PI / 180, c = Math.cos(a), sn = Math.sin(a);
+    const rx = p.x - s0.x, ry = p.y - s0.y;
+    const lx = rx * c + ry * sn, ly = -rx * sn + ry * c;     // pointer in the fixture's own frame
+    const ax = -s0.w / 2, ay = -s0.h / 2;                      // opposite corner stays put
+    const st = snapStep() || 1;
+    let w = Math.max(st, Math.round(Math.max(5, lx - ax) / st) * st);
+    let h = Math.max(st, Math.round(Math.max(5, ly - ay) / st) * st);
+    if (e.shiftKey) { const k = Math.max(w / s0.w, h / s0.h); w = Math.round(s0.w * k); h = Math.round(s0.h * k); }
+    const ncx = ax + w / 2, ncy = ay + h / 2;
+    Object.assign(it, {w, h, x:s0.x + ncx * c - ncy * sn, y:s0.y + ncx * sn + ncy * c});
+    drag.moved = true;
+  } else if (drag.type === 'rotate') {
+    const it = drag.it;
+    let ang = Math.atan2(p.y - it.y, p.x - it.x) * 180 / Math.PI + 90;
+    if (!e.altKey) ang = Math.round(ang / 15) * 15;
+    it.r = ((Math.round(ang) % 360) + 360) % 360;
+    drag.moved = true;
+  }
+  render(); fillProps();
+});
+
+function endDrag() {
+  if (!drag) return;
+  if (drag.type === 'pan' && !drag.moved) { sel.clear(); render(); renderProps(); }
+  else if (drag.type !== 'pan' && drag.moved) { if (drag.type === 'move' && drag.starts.length === 1) snapItem(drag.starts[0].it); commit(); render(); }
+  svg.classList.remove('panning');
+  drag = null;
+}
+svg.addEventListener('pointerup', endDrag);
+svg.addEventListener('pointercancel', endDrag);
+svg.addEventListener('dblclick', e => { if (e.target.closest('[data-id]')) $('#pLabel')?.select(); });
+svg.addEventListener('wheel', e => {
+  e.preventDefault();
+  const r = svg.getBoundingClientRect();
+  zoomAt(Math.exp(-e.deltaY * (e.ctrlKey ? .01 : .0015)), e.clientX - r.left, e.clientY - r.top);
+}, {passive:false});
+svg.addEventListener('dragover', e => e.preventDefault());
+svg.addEventListener('drop', e => {
+  e.preventDefault();
+  const type = e.dataTransfer.getData('text/plain');
+  if (TYPES[type]) addItem(type, pt(e));
+});
+
+document.addEventListener('keydown', e => {
+  const typing = e.target.closest('input,textarea,select');
+  const mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
+  if (mod && k === 'z' && !typing) { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
+  if (mod && k === 'y' && !typing) { e.preventDefault(); redo(); return; }
+  if (typing) return;
+  if (e.code === 'Space') { spaceDown = true; e.preventDefault(); return; }
+  if (mod && k === 'd') { e.preventDefault(); duplicate(); return; }
+  if (mod && k === 'c') { copySel(); return; }
+  if (mod && k === 'v') { e.preventDefault(); paste(); return; }
+  if (mod && k === 'a') { e.preventDefault(); sel = new Set(doc.items.map(i => i.id)); render(); renderProps(); return; }
+  if (mod) return;
+  if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteSel(); }
+  else if (k === 'r') rotateSel(e.shiftKey ? -90 : 90);
+  else if (k === 'escape') { sel.clear(); render(); renderProps(); }
+  else if (k === 'f') fit();
+  else if (e.key === '+' || e.key === '=') zoomAt(1.25);
+  else if (e.key === '-') zoomAt(.8);
+  else if (e.key.startsWith('Arrow')) {
+    e.preventDefault();
+    const s = e.shiftKey ? 1 : (snapStep() || 10);
+    nudge({ArrowLeft:-s, ArrowRight:s}[e.key] || 0, {ArrowUp:-s, ArrowDown:s}[e.key] || 0);
+  }
+});
+document.addEventListener('keyup', e => { if (e.code === 'Space') spaceDown = false; });
+window.addEventListener('blur', () => { spaceDown = false; });
+
+// ---------- Panels ----------
+function deptOptions(cur) {
+  return '<option value="">— None —</option>' + doc.departments.map(d =>
+    `<option value="${esc(d.id)}"${d.id === cur ? ' selected' : ''}>${esc(d.name)}</option>`).join('');
+}
+function typeOptions(cur) {
+  const cats = [...new Set(Object.values(TYPES).map(t => t.cat))];
+  return cats.map(c => `<optgroup label="${c}">` + Object.entries(TYPES).filter(([, t]) => t.cat === c)
+    .map(([k, t]) => `<option value="${k}"${k === cur ? ' selected' : ''}>${t.name}</option>`).join('') + '</optgroup>').join('');
+}
+
+function fillProps() {
+  if (sel.size !== 1 || !$('#pX')) return;
+  const it = selItems()[0], b = box(it);
+  const set = (id, v) => { const i = $(id); if (document.activeElement !== i) i.value = Math.round(v * 10) / 10; };
+  set('#pX', b.l); set('#pY', b.t); set('#pW', it.w); set('#pH', it.h); set('#pR', it.r || 0);
+  $('#pArea').textContent = m2(it.w * it.h);
+}
+
+function renderProps() {
+  const P = $('#props');
+  const items = selItems();
+  if (items.length === 0) return renderStats(P);
+  if (items.length > 1) return renderMulti(P, items);
+  const it = items[0], t = TYPES[it.type];
+  P.innerHTML = `
+    <div class="sec">
+      <h2>Fixture <span style="text-transform:none;letter-spacing:0">${t.name}</span></h2>
+      <label class="f">Label<input id="pLabel" value="${esc(it.label)}" placeholder="${esc(t.name)}"></label>
+      <label class="f">Type<select id="pType">${typeOptions(it.type)}</select></label>
+      <label class="f">Department<select id="pDept">${deptOptions(it.dept)}</select></label>
+      <div class="row">
+        <label class="f">Left (cm)<input id="pX" type="number"></label>
+        <label class="f">Top (cm)<input id="pY" type="number"></label>
+      </div>
+      <div class="row">
+        <label class="f">Width (cm)<input id="pW" type="number" min="1"></label>
+        <label class="f">Depth (cm)<input id="pH" type="number" min="1"></label>
+      </div>
+      <div class="f">Rotation (°)
+        <div class="inline"><input id="pR" type="number" step="15"><button id="pRL" title="Rotate −90° (Shift+R)">⟲</button><button id="pRR" title="Rotate +90° (R)">⟳</button></div>
+      </div>
+      <label class="f">Notes<textarea id="pNotes" rows="3" placeholder="Planogram, supplier, capacity…">${esc(it.notes)}</textarea></label>
+      <label class="check"><input type="checkbox" id="pLock"${it.locked ? ' checked' : ''}> Lock position &amp; size</label>
+      <div class="stat muted"><span>Footprint</span><span id="pArea"></span></div>
+      ${problems.has(it.id) ? '<div class="warn" style="margin-top:6px">⚠ Overlaps another fixture or sits outside the walls.</div>' : ''}
+    </div>
+    <div class="sec btns">
+      <button id="pDup" title="Ctrl+D">Duplicate</button>
+      <button id="pFront">To front</button>
+      <button id="pBack">To back</button>
+      <button id="pDel" class="danger" title="Delete">Delete</button>
+    </div>`;
+  fillProps();
+  const live = (id, fn) => {
+    const i = $(id);
+    i.addEventListener('input', () => { fn(i); render(); });
+    i.addEventListener('change', () => { commit(); fillProps(); });
+  };
+  const num = (id, fn) => live(id, i => { const v = parseFloat(i.value); if (isFinite(v)) fn(v); });
+  live('#pLabel', i => { it.label = i.value; });
+  live('#pNotes', i => { it.notes = i.value; });
+  num('#pX', v => { it.x = v + ext(it).hw; });
+  num('#pY', v => { it.y = v + ext(it).hh; });
+  num('#pW', v => { it.w = Math.max(1, v); });
+  num('#pH', v => { it.h = Math.max(1, v); });
+  num('#pR', v => { it.r = ((v % 360) + 360) % 360; });
+  $('#pType').onchange = e => { it.type = e.target.value; render(); renderProps(); commit(); };
+  $('#pDept').onchange = e => { it.dept = e.target.value; render(); renderDepts(); commit(); };
+  $('#pLock').onchange = e => { it.locked = e.target.checked; render(); commit(); };
+  $('#pRL').onclick = () => rotateSel(-90);
+  $('#pRR').onclick = () => rotateSel(90);
+  $('#pDup').onclick = duplicate;
+  $('#pFront').onclick = () => reorder(true);
+  $('#pBack').onclick = () => reorder(false);
+  $('#pDel').onclick = deleteSel;
+}
+
+function renderMulti(P, items) {
+  P.innerHTML = `
+    <div class="sec">
+      <h2>${items.length} fixtures selected</h2>
+      <label class="f">Set department<select id="mDept"><option value="__keep">— Keep as is —</option>${deptOptions(null)}</select></label>
+      <div class="cat">Align</div>
+      <div class="btns">
+        <button data-al="l">Left</button><button data-al="c">Center</button><button data-al="r">Right</button>
+        <button data-al="t">Top</button><button data-al="m">Middle</button><button data-al="b">Bottom</button>
+      </div>
+      <div class="cat">Distribute evenly</div>
+      <div class="btns"><button data-di="x">Horizontally</button><button data-di="y">Vertically</button></div>
+      <div class="cat">Arrange</div>
+      <div class="btns">
+        <button id="mRot">Rotate 90°</button><button id="mDup">Duplicate</button>
+        <button id="mLock">Lock all</button><button id="mUnlock">Unlock all</button>
+        <button id="mDel" class="danger">Delete</button>
+      </div>
+    </div>
+    <div class="sec muted" style="font-size:12px">Shift-click a fixture to add or remove it from the selection. Drag any selected fixture to move them together.</div>`;
+  $('#mDept').onchange = e => {
+    if (e.target.value === '__keep') return;
+    items.forEach(i => { i.dept = e.target.value; });
+    render(); renderDepts(); commit();
+  };
+  P.querySelectorAll('[data-al]').forEach(b => b.onclick = () => align(b.dataset.al));
+  P.querySelectorAll('[data-di]').forEach(b => b.onclick = () => distribute(b.dataset.di));
+  $('#mRot').onclick = () => rotateSel(90);
+  $('#mDup').onclick = duplicate;
+  $('#mLock').onclick = () => { items.forEach(i => { i.locked = true; }); render(); commit(); };
+  $('#mUnlock').onclick = () => { items.forEach(i => { i.locked = false; }); render(); commit(); };
+  $('#mDel').onclick = deleteSel;
+}
+
+function renderStats(P) {
+  const W = doc.store.w, H = doc.store.h;
+  const fixtures = doc.items.filter(i => !TYPES[i.type].free);
+  const foot = fixtures.reduce((s, i) => s + i.w * i.h, 0);
+  const byDept = doc.departments.map(d => {
+    const its = doc.items.filter(i => i.dept === d.id && !TYPES[i.type].free);
+    return {d, n:its.length, a:its.reduce((s, i) => s + i.w * i.h, 0)};
+  }).filter(x => x.n);
+  const counts = {};
+  fixtures.forEach(i => { counts[i.type] = (counts[i.type] || 0) + 1; });
+  P.innerHTML = `
+    <div class="sec">
+      <h2>Overview</h2>
+      <div class="stat"><span>Floor size</span><b>${fmtM(W)} × ${fmtM(H)}</b></div>
+      <div class="stat"><span>Floor area</span><b>${m2(W * H)}</b></div>
+      <div class="stat"><span>Fixtures</span><b>${fixtures.length}</b></div>
+      <div class="stat"><span>Fixture footprint</span><b>${m2(foot)}</b></div>
+      <div class="stat"><span>Floor coverage</span><b>${W * H ? Math.round(foot / (W * H) * 100) : 0}%</b></div>
+    </div>
+    <div class="sec">
+      <h2>Layout check</h2>
+      ${problems.size
+        ? `<div class="warn" style="margin-bottom:8px">⚠ ${problems.size} fixture${problems.size > 1 ? 's' : ''} overlap or sit outside the walls.</div><button id="selProblems">Select them</button>`
+        : '<div class="ok">✓ No overlaps, everything inside the walls.</div>'}
+    </div>
+    <div class="sec">
+      <h2>By department</h2>
+      ${byDept.length ? byDept.map(x => `<div class="stat"><span><span class="sw" style="background:${esc(x.d.color)}"></span>${esc(x.d.name)}</span><span>${x.n} · ${m2(x.a)}</span></div>`).join('') : '<div class="muted">No fixtures assigned yet.</div>'}
+    </div>
+    <div class="sec">
+      <h2>By fixture type</h2>
+      ${Object.keys(counts).length ? Object.entries(counts).map(([k, n]) => `<div class="stat"><span>${TYPES[k].name}</span><span>${n}</span></div>`).join('') : '<div class="muted">Add fixtures from the left panel.</div>'}
+    </div>
+    <div class="sec">
+      <h2>Shortcuts</h2>
+      <div class="keys">
+        <kbd>Drag</kbd><span>Move fixture / pan floor</span>
+        <kbd>Scroll</kbd><span>Zoom</span>
+        <kbd>Shift+Click</kbd><span>Multi-select</span>
+        <kbd>R</kbd><span>Rotate 90° (Shift: back)</span>
+        <kbd>Arrows</kbd><span>Nudge (Shift: 1 cm)</span>
+        <kbd>Ctrl+D</kbd><span>Duplicate</span>
+        <kbd>Ctrl+C / V</kbd><span>Copy / paste</span>
+        <kbd>Ctrl+Z / Y</kbd><span>Undo / redo</span>
+        <kbd>Del</kbd><span>Delete</span>
+        <kbd>F</kbd><span>Fit store to screen</span>
+      </div>
+      <div class="muted" style="font-size:12px;margin-top:8px">Rotate handle snaps to 15° — hold Alt for free rotation. Shift while resizing keeps proportions.</div>
+    </div>`;
+  const b = $('#selProblems');
+  if (b) b.onclick = () => { sel = new Set(problems); render(); renderProps(); };
+}
+
+function renderLibrary() {
+  const root = $('#library');
+  root.replaceChildren();
+  for (const c of [...new Set(Object.values(TYPES).map(t => t.cat))]) {
+    root.append(mk('div', {class:'cat'}, c));
+    const grid = mk('div', {class:'lib'});
+    for (const [k, t] of Object.entries(TYPES)) {
+      if (t.cat !== c) continue;
+      const ic = el('svg', {viewBox:`${-t.w / 2 - 8} ${-t.h / 2 - 8} ${t.w + 16} ${t.h + 16}`});
+      const g = el('g');
+      drawShape(g, {type:k, w:t.w, h:t.h}, t.color);
+      ic.append(g);
+      grid.append(mk('button', {title:`${t.name} — ${t.w} × ${t.h} cm`, draggable:'true',
+        onclick:() => addItem(k), ondragstart:e => e.dataTransfer.setData('text/plain', k)}, ic, mk('span', {}, t.name)));
+    }
+    root.append(grid);
+  }
+}
+
+function renderDepts() {
+  const root = $('#depts');
+  root.replaceChildren();
+  for (const d of doc.departments) {
+    const n = doc.items.filter(i => i.dept === d.id).length;
+    const color = mk('input', {type:'color', value:d.color, title:'Colour'});
+    color.addEventListener('input', () => { d.color = color.value; render(); });
+    color.addEventListener('change', commit);
+    const name = mk('input', {type:'text', value:d.name});
+    name.addEventListener('input', () => { d.name = name.value; });
+    name.addEventListener('change', () => { commit(); renderProps(); });
+    const del = mk('button', {title:'Remove department', onclick:() => {
+      if (n && !confirm(`Remove "${d.name}"? ${n} fixture(s) will be unassigned.`)) return;
+      doc.departments = doc.departments.filter(x => x !== d);
+      doc.items.forEach(i => { if (i.dept === d.id) i.dept = ''; });
+      refresh(); commit();
+    }}, '×');
+    root.append(mk('div', {class:'dept'}, color, name, mk('span', {class:'n', title:'Fixtures'}, String(n)), del));
+  }
+}
+
+function fillStore() {
+  const s = doc.store;
+  $('#sW').value = s.w / 100; $('#sH').value = s.h / 100;
+  $('#sGrid').value = s.grid; $('#sSnap').value = s.snap; $('#sLabels').checked = !!s.labels; $('#sOutline').checked = !!s.outline;
+}
+function renderLayoutSel() {
+  const S = $('#layoutSel');
+  S.replaceChildren(...Object.entries(lib.layouts).map(([id, d]) => {
+    const o = mk('option', {value:id}, d.name || 'Untitled'); if (id === lib.current) o.selected = true; return o;
+  }));
+  if (document.activeElement !== $('#layoutName')) $('#layoutName').value = doc.name;
+}
+function refresh() { render(); renderProps(); renderDepts(); }
+function refreshAll() { fillStore(); renderLayoutSel(); refresh(); updateUndo(); }
+
+// ---------- Store settings ----------
+const storeNum = (id, key) => $(id).addEventListener('change', e => {
+  const v = parseFloat(e.target.value);
+  if (isFinite(v) && v > 0) { doc.store[key] = Math.round(v * 100); render(); renderProps(); commit(); } else fillStore();
+});
+storeNum('#sW', 'w'); storeNum('#sH', 'h');
+$('#sGrid').onchange = e => { doc.store.grid = +e.target.value; render(); commit(); };
+$('#sSnap').onchange = e => { doc.store.snap = +e.target.value; commit(); };
+$('#sLabels').onchange = e => { doc.store.labels = e.target.checked; render(); commit(); };
+$('#sOutline').onchange = e => { doc.store.outline = e.target.checked; render(); commit(); };
+$('#bAddDept').onclick = () => {
+  const used = new Set(doc.departments.map(d => d.color));
+  const color = EXTRA_COLORS.find(c => !used.has(c)) || '#' + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0');
+  doc.departments.push({id:uid(), name:'New department', color});
+  renderDepts(); renderProps(); commit();
+  const inputs = $('#depts').querySelectorAll('input[type=text]');
+  inputs[inputs.length - 1].select();
+};
+
+// ---------- Layouts ----------
+$('#layoutSel').onchange = e => openLayout(e.target.value);
+$('#layoutName').addEventListener('input', e => {
+  doc.name = e.target.value;
+  const o = $('#layoutSel').selectedOptions[0]; if (o) o.textContent = doc.name || 'Untitled';
+});
+$('#layoutName').addEventListener('change', commit);
+$('#bNew').onclick = () => { const id = uid(); lib.layouts[id] = blankDoc(); openLayout(id); $('#layoutName').select(); };
+$('#bCopyLayout').onclick = () => {
+  const id = uid(), copy = JSON.parse(JSON.stringify(doc));
+  copy.name = doc.name + ' (copy)';
+  lib.layouts[id] = copy; openLayout(id);
+};
+$('#bDelLayout').onclick = () => {
+  if (!confirm(`Delete the layout "${doc.name}"? This can't be undone.`)) return;
+  delete lib.layouts[lib.current];
+  const ids = Object.keys(lib.layouts);
+  if (!ids.length) { const id = uid(); lib.layouts[id] = blankDoc(); ids.push(id); }
+  openLayout(ids[0]);
+};
+$('#bUndo').onclick = undo;
+$('#bRedo').onclick = redo;
+$('#zIn').onclick = () => zoomAt(1.25);
+$('#zOut').onclick = () => zoomAt(.8);
+$('#zFit').onclick = fit;
+
+// ---------- Import / export ----------
+const fileName = ext2 => (doc.name || 'store-layout').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-') + '.' + ext2;
+function download(blob, name) {
+  const a = mk('a', {href:URL.createObjectURL(blob), download:name});
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+$('#bJSON').onclick = () => download(new Blob([JSON.stringify(doc, null, 2)], {type:'application/json'}), fileName('json'));
+$('#bImport').onclick = () => $('#fileIn').click();
+$('#fileIn').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  try {
+    const d = normalize(JSON.parse(await f.text()));
+    if (!d.departments.length) d.departments = DEFAULT_DEPTS.map(x => ({...x}));
+    const id = uid(); lib.layouts[id] = d; openLayout(id);
+  } catch (err) { alert('That file could not be read as a store layout.\n' + err.message); }
+};
+$('#bPNG').onclick = async () => {
+  const W = doc.store.w, H = doc.store.h, pad = 80;
+  const k = clamp(3000 / (W + 2 * pad), .3, 3);
+  const keepSel = sel, keepView = {...view};
+  sel = new Set(); view.z = k; render();
+  const clone = svg.cloneNode(true);
+  sel = keepSel; view = keepView; render();
+  clone.querySelector('#overlay').replaceChildren();
+  clone.querySelectorAll('.problem').forEach(n => n.classList.remove('problem'));
+  const w = Math.round((W + 2 * pad) * k), h = Math.round((H + 2 * pad) * k);
+  clone.removeAttribute('id');
+  clone.setAttribute('viewBox', `${-pad} ${-pad} ${W + 2 * pad} ${H + 2 * pad}`);
+  clone.setAttribute('width', w); clone.setAttribute('height', h);
+  clone.insertBefore(el('rect', {x:-pad, y:-pad, width:W + 2 * pad, height:H + 2 * pad, fill:'#fff'}), clone.firstChild);
+  const img = new Image();
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(clone));
+  try { await img.decode(); } catch { alert('Could not render the image.'); return; }
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  c.getContext('2d').drawImage(img, 0, 0);
+  c.toBlob(b => download(b, fileName('png')));
+};
+
+// ---------- Boot ----------
+lib = loadLib();
+renderLibrary();
+new ResizeObserver(() => { applyView(); }).observe(svg);
+openLayout(lib.current);
+</script>
+</body>
+</html>
