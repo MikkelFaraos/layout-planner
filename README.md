@@ -10,7 +10,8 @@ A single-file web app for planning and rearranging a shop floor. Open `index.htm
 - Multi-select with align and distribute tools
 - Overlap / outside-the-walls check and floor-space stats per department
 - Multiple saved layouts (stored in the browser), undo/redo
-- Export to JSON (backup/share) and PNG; import JSON
+- Save (Ctrl+S) and Save as… (Ctrl+Shift+S); autosaves to the browser too
+- Save to file / Open file (JSON) to back up or move layouts between computers; export PNG
 
 ## Shortcuts
 
@@ -24,5 +25,6 @@ A single-file web app for planning and rearranging a shop floor. Open `index.htm
 | Ctrl+D | Duplicate |
 | Ctrl+C / Ctrl+V | Copy / paste |
 | Ctrl+Z / Ctrl+Y | Undo / redo |
+| Ctrl+S / Ctrl+Shift+S | Save / save as |
 | Delete | Delete |
 | F | Fit store to screen |

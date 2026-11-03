@@ -53,6 +53,9 @@ main{position:relative;background:var(--canvas);overflow:hidden;min-height:300px
 .h-res{cursor:nwse-resize}
 .status{position:absolute;left:10px;bottom:10px;background:rgba(255,255,255,.92);border:1px solid var(--border);border-radius:6px;padding:4px 9px;font-size:12px;color:var(--muted);pointer-events:none}
 .zoom{position:absolute;right:10px;bottom:10px;display:flex;gap:4px}
+.toast{position:fixed;left:50%;top:64px;transform:translate(-50%,-8px);background:#1d2330;color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,.18);opacity:0;pointer-events:none;transition:opacity .15s,transform .15s;z-index:10}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast.err{background:var(--danger)}
 .muted{color:var(--muted)}
 .stat{display:flex;justify-content:space-between;gap:8px;padding:3px 0}
 .stat b{font-weight:600}
@@ -75,16 +78,17 @@ kbd{font:11px ui-monospace,Consolas,monospace;background:#f3f4f6;border:1px soli
     <h1>🏬 Store Layout Planner</h1>
     <select id="layoutSel" title="Saved layouts" style="width:auto;max-width:200px"></select>
     <input id="layoutName" style="width:180px" title="Layout name">
+    <button id="bSave" class="primary" title="Save layout (Ctrl+S)">Save</button>
+    <button id="bCopyLayout" title="Save a copy under a new name (Ctrl+Shift+S)">Save as…</button>
     <button id="bNew" title="New blank layout">New</button>
-    <button id="bCopyLayout" title="Duplicate this layout">Duplicate</button>
     <button id="bDelLayout" class="danger" title="Delete this layout">Delete</button>
     <span class="sep"></span>
     <button id="bUndo" class="icon" title="Undo (Ctrl+Z)">↶</button>
     <button id="bRedo" class="icon" title="Redo (Ctrl+Y)">↷</button>
     <span class="sep"></span>
-    <button id="bImport">Import</button>
-    <button id="bJSON">Export JSON</button>
-    <button id="bPNG" class="primary">Export image</button>
+    <button id="bImport" title="Open a layout saved as a file">Open file</button>
+    <button id="bJSON" title="Save this layout as a file (backup, or to move it to another computer)">Save to file</button>
+    <button id="bPNG">Export image</button>
     <input type="file" id="fileIn" accept=".json,application/json" hidden>
     <span id="saveState" class="muted" style="margin-left:auto"></span>
   </header>
@@ -130,6 +134,7 @@ kbd{font:11px ui-monospace,Consolas,monospace;background:#f3f4f6;border:1px soli
 
   <aside class="right" id="props"></aside>
 </div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
 const NS = 'http://www.w3.org/2000/svg';
@@ -298,9 +303,33 @@ function persist() {
   try {
     localStorage.setItem(KEY, JSON.stringify(lib));
     $('#saveState').textContent = 'Saved ' + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    return true;
   } catch {
-    $('#saveState').textContent = 'Not saved — browser storage unavailable (use Export JSON)';
+    $('#saveState').textContent = 'Not saved — browser storage unavailable (use Save to file)';
+    return false;
   }
+}
+let toastTimer;
+function toast(msg, err = false) {
+  const t = $('#toast');
+  t.textContent = msg; t.classList.toggle('err', err); t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), err ? 5000 : 2000);
+}
+function saveLayout() {
+  document.activeElement?.blur?.();   // apply any half-typed field first
+  commit();
+  if (persist()) toast(`✓ Saved "${doc.name}" in this browser`);
+  else toast('Browser storage is unavailable here — use "Save to file" to keep this layout.', true);
+}
+function saveLayoutAs() {
+  const name = prompt('Save a copy of this layout as:', doc.name + ' (copy)');
+  if (name == null || !name.trim()) return;
+  const id = uid(), copy = JSON.parse(JSON.stringify(doc));
+  copy.name = name.trim();
+  lib.layouts[id] = copy;
+  openLayout(id);
+  toast(`✓ Saved as "${copy.name}"`);
 }
 function commit() {
   const snap = JSON.stringify(doc);
@@ -693,6 +722,7 @@ document.addEventListener('keydown', e => {
   const mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
   if (mod && k === 'z' && !typing) { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
   if (mod && k === 'y' && !typing) { e.preventDefault(); redo(); return; }
+  if (mod && k === 's') { e.preventDefault(); e.shiftKey ? saveLayoutAs() : saveLayout(); return; }
   if (typing) return;
   if (e.code === 'Space') { spaceDown = true; e.preventDefault(); return; }
   if (mod && k === 'd') { e.preventDefault(); duplicate(); return; }
@@ -871,6 +901,7 @@ function renderStats(P) {
         <kbd>Ctrl+D</kbd><span>Duplicate</span>
         <kbd>Ctrl+C / V</kbd><span>Copy / paste</span>
         <kbd>Ctrl+Z / Y</kbd><span>Undo / redo</span>
+        <kbd>Ctrl+S</kbd><span>Save (Shift: save as)</span>
         <kbd>Del</kbd><span>Delete</span>
         <kbd>F</kbd><span>Fit store to screen</span>
       </div>
@@ -962,11 +993,8 @@ $('#layoutName').addEventListener('input', e => {
 });
 $('#layoutName').addEventListener('change', commit);
 $('#bNew').onclick = () => { const id = uid(); lib.layouts[id] = blankDoc(); openLayout(id); $('#layoutName').select(); };
-$('#bCopyLayout').onclick = () => {
-  const id = uid(), copy = JSON.parse(JSON.stringify(doc));
-  copy.name = doc.name + ' (copy)';
-  lib.layouts[id] = copy; openLayout(id);
-};
+$('#bSave').onclick = saveLayout;
+$('#bCopyLayout').onclick = saveLayoutAs;
 $('#bDelLayout').onclick = () => {
   if (!confirm(`Delete the layout "${doc.name}"? This can't be undone.`)) return;
   delete lib.layouts[lib.current];
@@ -987,7 +1015,10 @@ function download(blob, name) {
   document.body.append(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
-$('#bJSON').onclick = () => download(new Blob([JSON.stringify(doc, null, 2)], {type:'application/json'}), fileName('json'));
+$('#bJSON').onclick = () => {
+  download(new Blob([JSON.stringify(doc, null, 2)], {type:'application/json'}), fileName('json'));
+  toast(`✓ Saved ${fileName('json')} to your downloads`);
+};
 $('#bImport').onclick = () => $('#fileIn').click();
 $('#fileIn').onchange = async e => {
   const f = e.target.files[0]; e.target.value = '';
@@ -996,7 +1027,8 @@ $('#fileIn').onchange = async e => {
     const d = normalize(JSON.parse(await f.text()));
     if (!d.departments.length) d.departments = DEFAULT_DEPTS.map(x => ({...x}));
     const id = uid(); lib.layouts[id] = d; openLayout(id);
-  } catch (err) { alert('That file could not be read as a store layout.\n' + err.message); }
+    toast(`✓ Opened "${d.name}"`);
+  } catch (err) { toast('That file could not be read as a store layout: ' + err.message, true); }
 };
 $('#bPNG').onclick = async () => {
   const W = doc.store.w, H = doc.store.h, pad = 80;
