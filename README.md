@@ -8,7 +8,7 @@ A single-file web app for planning and rearranging a shop floor. Open `index.htm
 - Fixture library: shelves, racks, tables, counters, walls, pillars, zones and more
 - Departments with custom names and colours
 - Multi-select with align and distribute tools
-- Overlap / outside-the-walls check and floor-space stats per department
+- Overlap / outside-the-walls check and floor-space stats per department (enter the actual floor area for irregular stores)
 - Multiple saved layouts (stored in the browser), undo/redo
 - Save (Ctrl+S) and Save as… (Ctrl+Shift+S); autosaves to the browser too
 - Save to file / Open file (JSON) to back up or move layouts between computers; export PNG

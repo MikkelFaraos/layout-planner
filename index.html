@@ -113,6 +113,7 @@ kbd{font:11px ui-monospace,Consolas,monospace;background:#f3f4f6;border:1px soli
           <select id="sSnap"><option value="0">Off</option><option value="5">5 cm</option><option value="10">10 cm</option><option value="25">25 cm</option><option value="50">50 cm</option><option value="100">1 m</option></select>
         </label>
       </div>
+      <label class="f">Actual floor area (m²)<input id="sArea" type="number" min="1" step="1" placeholder="Width × depth"></label>
       <label class="check"><input type="checkbox" id="sLabels"> Show labels</label>
       <label class="check" title="Turn off when the store's shape is drawn with Wall pieces"><input type="checkbox" id="sOutline"> Rectangular outer wall</label>
     </div>
@@ -214,7 +215,7 @@ function blankDoc(name = 'New layout') {
 }
 function normalize(d) {
   d.name = d.name || 'Untitled layout';
-  d.store = {w:2000, h:1200, grid:100, snap:10, labels:true, outline:true, ...(d.store || {})};
+  d.store = {w:2000, h:1200, grid:100, snap:10, labels:true, outline:true, area:0, ...(d.store || {})};
   d.departments = Array.isArray(d.departments) ? d.departments : [];
   d.items = (Array.isArray(d.items) ? d.items : []).filter(i => i && TYPES[i.type]).map(i => ({
     label:'', dept:'', notes:'', r:0, locked:false, ...i, id:i.id || uid(),
@@ -805,6 +806,7 @@ function renderMulti(P, items) {
 
 function renderStats(P) {
   const W = doc.store.w, H = doc.store.h;
+  const area = doc.store.area ? doc.store.area * 10000 : W * H;   // cm²; irregular stores enter their real area
   const fixtures = doc.items.filter(i => !TYPES[i.type].free);
   const foot = fixtures.reduce((s, i) => s + i.w * i.h, 0);
   const byDept = doc.departments.map(d => {
@@ -817,10 +819,10 @@ function renderStats(P) {
     <div class="sec">
       <h2>Overview</h2>
       <div class="stat"><span>Floor size</span><b>${fmtM(W)} × ${fmtM(H)}</b></div>
-      <div class="stat"><span>Floor area</span><b>${m2(W * H)}</b></div>
+      <div class="stat"><span>Floor area</span><b>${m2(area)}</b></div>
       <div class="stat"><span>Fixtures</span><b>${fixtures.length}</b></div>
       <div class="stat"><span>Fixture footprint</span><b>${m2(foot)}</b></div>
-      <div class="stat"><span>Floor coverage</span><b>${W * H ? Math.round(foot / (W * H) * 100) : 0}%</b></div>
+      <div class="stat"><span>Floor coverage</span><b>${area ? Math.round(foot / area * 100) : 0}%</b></div>
     </div>
     <div class="sec">
       <h2>Layout check</h2>
@@ -901,6 +903,7 @@ function fillStore() {
   const s = doc.store;
   $('#sW').value = s.w / 100; $('#sH').value = s.h / 100;
   $('#sGrid').value = s.grid; $('#sSnap').value = s.snap; $('#sLabels').checked = !!s.labels; $('#sOutline').checked = !!s.outline;
+  $('#sArea').value = s.area || '';
 }
 function renderLayoutSel() {
   const S = $('#layoutSel');
@@ -922,6 +925,11 @@ $('#sGrid').onchange = e => { doc.store.grid = +e.target.value; render(); commit
 $('#sSnap').onchange = e => { doc.store.snap = +e.target.value; commit(); };
 $('#sLabels').onchange = e => { doc.store.labels = e.target.checked; render(); commit(); };
 $('#sOutline').onchange = e => { doc.store.outline = e.target.checked; render(); commit(); };
+$('#sArea').onchange = e => {
+  const v = parseFloat(e.target.value);
+  doc.store.area = isFinite(v) && v > 0 ? v : 0;
+  fillStore(); renderProps(); commit();
+};
 $('#bAddDept').onclick = () => {
   const used = new Set(doc.departments.map(d => d.color));
   const color = EXTRA_COLORS.find(c => !used.has(c)) || '#' + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0');
