@@ -207,66 +207,6 @@ function newItem(type, x, y, o = {}) {
   return {id:uid(), type, x, y, w:t.w, h:t.h, r:0, label:'', dept:'', notes:'', locked:false, ...o};
 }
 
-// The store as drawn in the owner's sketch. Coordinates are sketch pixels,
-// scaled at SK cm per pixel (an estimate — resize the store if it's off).
-const SK = 4, OX = 115, OY = 55;
-function skSeg(type, x1, y1, x2, y2, thick, o = {}) {
-  [x1, y1, x2, y2] = [(x1 - OX) * SK, (y1 - OY) * SK, (x2 - OX) * SK, (y2 - OY) * SK];
-  const len = Math.hypot(x2 - x1, y2 - y1) + (type === 'wall' ? thick : 0);   // walls overlap at corners
-  const r = ((Math.round(Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI) % 180) + 180) % 180;
-  return newItem(type, Math.round((x1 + x2) / 2), Math.round((y1 + y2) / 2), {w:Math.round(len), h:thick, r, ...o});
-}
-function skBox(type, dept, x1, y1, x2, y2, o = {}) {
-  let w = (x2 - x1) * SK, h = (y2 - y1) * SK, r = 0;
-  if (h > w * 1.5) { [w, h] = [h, w]; r = 90; }
-  return newItem(type, ((x1 + x2) / 2 - OX) * SK, ((y1 + y2) / 2 - OY) * SK, {w, h, r, dept, ...o});
-}
-function sampleDoc() {
-  const items = [];
-  const wallPath = [[235,58],[510,58]], wallPath2 = [[550,58],[632,58],[632,755],[408,755],[408,728],[290,728],[290,865],[117,865],
-    [117,620],[345,620],[345,643],[395,643],[395,573],[478,573],[478,512],[455,482],[478,455],[478,360],[455,325],[278,325],
-    [278,133],[235,133],[235,58]];
-  for (const path of [wallPath, wallPath2, [[573,215],[573,272],[632,272]]])
-    for (let k = 1; k < path.length; k++) items.push(skSeg('wall', ...path[k - 1], ...path[k], 20));
-  items.push(skSeg('wall', 577, 705, 577, 752, 30));
-  items.push(skSeg('entrance', 512, 58, 548, 58, 30, {label:'Ind/ud'}));
-
-  const B = (...a) => items.push(skBox(...a));
-  // Kostume afdeling
-  B('wallshelf', 'kostume', 250, 63, 355, 72); B('promo', 'kostume', 427, 63, 439, 70); B('promo', 'kostume', 481, 63, 493, 70);
-  B('wallshelf', 'kostume', 238, 62, 246, 120); B('wallshelf', 'kostume', 238, 121, 293, 129); B('wallshelf', 'kostume', 285, 131, 293, 253);
-  B('rack', 'kostume', 265, 91, 286, 98); B('rack', 'kostume', 290, 91, 311, 98); B('rack', 'kostume', 315, 91, 347, 98);
-  for (const x of [374, 399, 421, 444]) B('rack', 'kostume', x, 94, x + 8, 132);
-  B('promo', 'kostume', 458, 315, 481, 327); B('wallshelf', 'kostume', 483, 365, 491, 448);
-  items.push(skSeg('wallshelf', 468, 477, 487, 458, 32, {dept:'kostume'}));
-  items.push(skSeg('wallshelf', 462, 481, 487, 507, 32, {dept:'kostume'}));
-  B('wallshelf', 'kostume', 483, 514, 491, 606); B('wallshelf', 'kostume', 399, 610, 407, 642);
-  B('promo', 'kostume', 559, 160, 567, 170); B('wallshelf', 'kostume', 122, 636, 130, 697);
-  B('gondola', 'kostume', 545, 330, 556, 450); B('gondola', 'kostume', 545, 450, 556, 570);
-  // Tilbehør
-  B('gondola', 'tilbehor', 557, 330, 568, 450); B('gondola', 'tilbehor', 557, 450, 568, 570);
-  B('table', 'tilbehor', 345, 160, 457, 271, {label:'Midterdisplay'});
-  // Begynder udstyr, kastevåben, potions
-  B('wallshelf', 'begynder', 552, 63, 630, 72); B('wallshelf', 'begynder', 550, 75, 558, 120); B('wallshelf', 'begynder', 621, 74, 630, 158);
-  B('wallshelf', 'kaste', 574, 162, 628, 170); B('promo', 'kaste', 290, 716, 330, 724);
-  B('wallshelf', 'potion', 620, 282, 630, 306);
-  B('zone', '', 558, 178, 630, 197, {label:'→'}); B('zone', '', 612, 198, 630, 248, {label:'↑'});
-  // Store våben, kro, replika
-  B('wallshelf', 'store', 620, 310, 630, 493); B('wallshelf', 'store', 620, 500, 630, 671);
-  B('wallshelf', 'kro', 575, 677, 630, 686); B('wallshelf', 'kro', 622, 687, 630, 750);
-  B('wallshelf', 'replika', 408, 702, 462, 711); B('wallshelf', 'replika', 463, 702, 473, 750); B('wallshelf', 'replika', 483, 743, 568, 750);
-  B('counter', '', 498, 690, 550, 717, {label:'Disk'});
-  // Læder, metal, tøj, sminke
-  B('wallshelf', 'laeder', 122, 625, 272, 634); B('wallshelf', 'laeder', 298, 624, 323, 632); B('wallshelf', 'laeder', 343, 649, 395, 657);
-  B('table', 'metal', 398, 575, 481, 607); B('table', 'metal', 178, 663, 230, 689); B('wallshelf', 'metal', 122, 853, 162, 861);
-  B('rack', 'toj', 122, 701, 130, 849); B('rack', 'toj', 166, 853, 276, 861); B('rack', 'toj', 278, 732, 286, 858);
-  B('rack', 'toj', 176, 739, 233, 747); B('rack', 'toj', 233, 750, 241, 807); B('rack', 'toj', 173, 808, 230, 816);
-  B('wallshelf', 'sminke', 285, 257, 293, 322); B('wallshelf', 'sminke', 298, 315, 447, 322);
-
-  items.forEach(i => { i.x = Math.round(i.x); i.y = Math.round(i.y); i.w = Math.round(i.w); i.h = Math.round(i.h); });
-  return {name:'Butikken (fra skitse)', store:{w:2080, h:3260, grid:100, snap:10, labels:true, outline:false},
-          departments:DEFAULT_DEPTS.map(d => ({...d})), items};
-}
 function blankDoc(name = 'New layout') {
   return {name, store:{w:2000, h:1200, grid:100, snap:10, labels:true, outline:true},
           departments:DEFAULT_DEPTS.map(d => ({...d})), items:[]};
@@ -296,7 +236,7 @@ function loadLib() {
     }
   } catch {}
   const id = uid();
-  return {current:id, layouts:{[id]:sampleDoc()}};
+  return {current:id, layouts:{[id]:blankDoc('My store')}};
 }
 function persist() {
   lib.layouts[lib.current] = doc;
