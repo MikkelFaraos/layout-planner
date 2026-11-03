@@ -176,6 +176,7 @@ const TYPES = {
   promo:     {name:'Promo stand',     w:80,  h:80,  shape:'rect',     cat:'Display',       color:'#fbcfe8'},
   rack:      {name:'Clothing rack',   w:150, h:60,  shape:'rack',     cat:'Display',       color:'#e5e7eb'},
   roundrack: {name:'Round rack',      w:100, h:100, shape:'circle',   cat:'Display',       color:'#e5e7eb'},
+  window:    {name:'Display window',  w:300, h:80,  shape:'window',   cat:'Display',       color:'#e0f2fe'},
   checkout:  {name:'Checkout',        w:180, h:80,  shape:'checkout', cat:'Service',       color:'#fecaca'},
   counter:   {name:'Service counter', w:250, h:70,  shape:'rect',     cat:'Service',       color:'#fed7aa'},
   fitting:   {name:'Fitting room',    w:150, h:150, shape:'room',     cat:'Service',       color:'#f5f5f4'},
@@ -367,6 +368,11 @@ function drawShape(g, it, col) {
   if (t.shape === 'freezer') g.append(el('rect', {x:x + 8, y:y + 8, width:Math.max(0, w - 16), height:Math.max(0, h - 16), fill:'none', stroke:'rgba(30,64,175,.45)', 'vector-effect':'non-scaling-stroke'}));
   if (t.shape === 'checkout') { const cw = Math.min(40, w * .25); g.append(el('rect', {x:w / 2 - cw - 8, y:y + 8, width:cw, height:Math.max(0, h - 16), rx:3, fill:'rgba(0,0,0,.2)'})); }
   if (t.shape === 'room') line(x + 6, h / 2 - 15, -x - 6, h / 2 - 15, {'stroke-dasharray':'6 4'});
+  if (t.shape === 'window') {   // glass pane along the street-facing (top) edge
+    const gy = y + Math.min(8, h * .12);
+    line(x, y, -x, y, {stroke:'#0284c7', 'stroke-width':3});
+    line(x + 2, gy, -x - 2, gy, {stroke:'#38bdf8', 'stroke-width':1.5});
+  }
 }
 
 function drawLabel(g, it) {
